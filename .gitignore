@@ -39,3 +39,37 @@
 
 # debug information files
 *.dwo
+
+# Latex auxillary files
+*.aux
+*.log
+*.bbl
+*.blg
+*.toc
+*.lof
+*.lot
+*.fls
+*.out
+*.fdb_latexmk
+*.synctex.gz
+*.nav
+*.snm
+*.vrb
+*.xdr
+*.bcf
+*.run.xml
+*.xml
+# latex specific
+*.pdfsync
+# minted cache
+_minted-*
+# output files
+*.pdf
+*.dvi
+*.ps
+# editor files
+*.swp
+*.swo
+*.
+*.bak
+*.vscode/
