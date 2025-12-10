@@ -40,6 +40,7 @@
 # debug information files
 *.dwo
 
+/hdc3022
 # Latex auxillary files
 *.aux
 *.log
@@ -59,6 +60,7 @@
 *.bcf
 *.run.xml
 *.xml
+*.o
 # latex specific
 *.pdfsync
 # minted cache
