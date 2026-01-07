@@ -9,6 +9,7 @@ watch: report.pdf
 	emacsclient -nw ./report.tex
 
 clean:
+	clear
 	rm -f *.synctex.gz *.log *.aux
 	rm -f *.bbl *.blg *.fls *.fdb_latexmk *.out *.pdf *.ps main.ppress.tex
 	rm -rf auto _region_* submission
