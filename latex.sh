@@ -135,9 +135,9 @@ export INFOPATH=$TL_BASE/$TL_YEAR/texmf-dist/doc/info:\$INFOPATH
 EOF
 chmod +x /etc/profile.d/texlive.sh
 
+# Cleanup
 echo "[7/7] Cleanup..."
 rm -rf "$WORKDIR"
-
 echo
 echo "=== Installation complete ==="
 echo "Restart your shell or run:"
