@@ -6,7 +6,7 @@
 set -e
 
 TL_BASE="/usr/local/texlive"
-ARCH="x86_64-linux"
+ARCH=$(uname -m)-linux
 
 echo "=== TeX Live Official Installer ==="
 
@@ -74,36 +74,6 @@ EOF
   exit 0
 fi
 
-# if [[ -n "$TL_EXISTING_TLMGR" ]]; then
-#   EXISTING_TL_BIN=$(dirname "$TL_EXISTING_TLMGR")
-#   EXISTING_TL_YEAR=$(basename "$(dirname "$(dirname "$(dirname "$TL_EXISTING_TLMGR")")")")
-
-#   echo "Existing TeX Live installation detected:"
-#   echo "  Year : $EXISTING_TL_YEAR"
-#   echo "  Bin  : $EXISTING_TL_BIN"
-#   echo
-
-#   read -rp "Do you want to upgrade TeX Live packages now? [y/N]: " UPGRADE
-#   if [[ "$UPGRADE" =~ ^[Yy]$ ]]; then
-#     echo "Upgrading TeX Live..."
-#     "$TL_EXISTING_TLMGR" update --self --all
-#     echo "Upgrade complete."
-#   else
-#     echo "Skipping upgrade."
-#   fi
-
-#   # Ensure PATH is configured
-#   echo
-#   echo "Ensuring PATH is configured..."
-#   cat <<EOF > /etc/profile.d/texlive.sh
-# # TeX Live $EXISTING_TL_YEAR
-# export PATH=$EXISTING_TL_BIN:\$PATH
-# EOF
-#   chmod +x /etc/profile.d/texlive.sh
-
-#   exit 0
-# fi
-
 echo "No existing TeX Live installation found."
 echo
 
@@ -131,9 +101,6 @@ echo
 echo "Selected scheme: $SCHEME"
 echo
 
-# Determine year dynamically
-TL_YEAR=$(date +%Y)
-
 echo "[1/7] Installing prerequisites..."
 apt update -y
 apt install -y perl wget xz-utils tar fontconfig
@@ -147,7 +114,9 @@ wget -q https://mirror.ctan.org/systems/texlive/tlnet/install-tl-unx.tar.gz
 
 echo "[4/7] Extracting installer..."
 zcat install-tl-unx.tar.gz | tar xf -
-cd install-tl-*
+
+INSTALL_DIR=$(find . -maxdepth 1 -type d -name "install-tl-*" | head -n 1)
+cd "$INSTALL_DIR"
 
 echo "[5/7] Installing TeX Live ($SCHEME)..."
 perl ./install-tl \
@@ -156,9 +125,13 @@ perl ./install-tl \
   --scheme="$SCHEME"
 
 echo "[6/7] Setting PATH system-wide..."
+# Determine year dynamically
+TL_YEAR=$(ls -1 "$TL_BASE" | grep -E '^[0-9]{4}$' | sort -n | tail -n 1)
 cat <<EOF > /etc/profile.d/texlive.sh
 # TeX Live $TL_YEAR
 export PATH=$TL_BASE/$TL_YEAR/bin/$ARCH:\$PATH
+export MANPATH=$TL_BASE/$TL_YEAR/texmf-dist/doc/man:\$MANPATH
+export INFOPATH=$TL_BASE/$TL_YEAR/texmf-dist/doc/info:\$INFOPATH
 EOF
 chmod +x /etc/profile.d/texlive.sh
 
@@ -172,6 +145,9 @@ echo "  source /etc/profile"
 echo
 echo "Verify:"
 "$TL_BASE/$TL_YEAR/bin/$ARCH/pdflatex" --version | head -n 2
-sleep 2
-echo
-echo "You can now use LaTeX!"
+sleep 1
+echo "Write scientific documents with love and LaTeX!"
+echo "======================================================="
+echo "  Automated by ths_hdc3022/latex.sh $(echo "© 2026") "
+echo "======================================================="
+echo "You can now use 'tlmgr' to manage packages."
