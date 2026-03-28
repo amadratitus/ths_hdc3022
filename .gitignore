@@ -1,47 +1,44 @@
-# Prerequisites
+# =========================
+# Kernel module build files
+# =========================
+*.o
+*.ko
+*.mod
+*.mod.c
+*.mod.o
+*.order
+*.symvers
+*.cmd
 *.d
 
-# Compiled Object files
+Module.symvers
+modules.order
+
+# Kernel build directories
+.tmp_versions/
+
+# =========================
+# General compiled objects
+# =========================
 *.slo
 *.lo
-*.o
 *.obj
-
-# Precompiled Headers
-*.gch
-*.pch
-
-# Linker files
-*.ilk
-
-# Debugger Files
-*.pdb
-
-# Compiled Dynamic libraries
+*.a
+*.lib
 *.so
 *.dylib
 *.dll
-
-# Fortran module files
-*.mod
-*.smod
-
-# Compiled Static libraries
-*.lai
-*.la
-*.a
-*.lib
-
-# Executables
 *.exe
 *.out
 *.app
 
-# debug information files
+# Debug / symbols
+*.pdb
 *.dwo
 
-/hdc3022
-# Latex auxillary files
+# =========================
+# Latex auxiliary files
+# =========================
 *.aux
 *.log
 *.bbl
@@ -50,28 +47,50 @@
 *.lof
 *.lot
 *.fls
-*.out
 *.fdb_latexmk
 *.synctex.gz
 *.nav
 *.snm
 *.vrb
-*.xdr
 *.bcf
 *.run.xml
 *.xml
-*.o
-# latex specific
-*.pdfsync
-# minted cache
-_minted-*
-# output files
+
+# Optional: ignore compiled PDF (remove if you want to track report.pdf)
 *.pdf
 *.dvi
 *.ps
-# editor files
+
+# =========================
+# Editor / OS files
+# =========================
 *.swp
 *.swo
-*.
 *.bak
-*.vscode/
+*~
+
+.vscode/
+.idea/
+
+# =========================
+# Project-specific ignores
+# =========================
+
+# Built module (explicit)
+hdc3022.ko
+
+# Linux kernel source clone (VERY IMPORTANT)
+linux/
+
+# Build artifacts folder
+build/
+logs/
+
+# =========================
+# Keep important files
+# =========================
+!README.md
+!Makefile
+!hdc3022.c
+!docs/
+!scripts/

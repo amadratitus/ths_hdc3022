@@ -1,9 +1,19 @@
-# ths_hdc3022
-Linux Driver for Temperature and Humidity Sensor with HDC3022
+# HDC3022 Linux Driver (ths_hdc3022)
 
-## LaTeX Workshop Guide for VS Code
-1. View Pdf Ctrl + Alt + V
-2. Build Project Ctrl + Alt + B
-3. Build Project Ctrl + Alt + B
-4. Build Project Ctrl + Alt + B
-5. Build Project Ctrl + Alt + B
+This project implements a Linux kernel module for interfacing with the HDC3022
+temperature and humidity sensor over I2C.
+
+## Hardware
+- Adafruit HDC3022 Sensor
+- MCP2221A USB-to-I2C bridge
+- STEMMA QT cable
+
+## Features
+- I2C communication with sensor
+- Temperature & humidity readings
+- Kernel module implementation
+- Concurrency-safe design
+
+## Build
+```bash
+make
