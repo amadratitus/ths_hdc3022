@@ -1,4 +1,3 @@
-
 \documentclass[10pt,a4]{article}
 \usepackage[english]{babel}
 \usepackage[utf8x]{inputenc}
@@ -12,48 +11,39 @@
 \usepackage[T1]{fontenc}
 \renewcommand\familydefault{\sfdefault}
 
-
-\author{Christopher Amadra Titus}
+\author{YOUR NAME HERE}
 \date{\today}
 \title{Linux Driver for Temperature and Humidity Sensor with HDC3022}
-
-
 
 \begin{document}
 \maketitle
 \tableofcontents
 
-\begin{center}
-NOTE: IT IS MANDATORY TO FILL IN ALL THE SECTIONS AND SUBSECTIONS IN THIS TEMPLATE
-\end{center}
-
 \section{Project data}
 
 \begin{itemize}
-\item 
-  Vittorio Zaccaria
+\item
+  Project supervisor(s): YOUR SUPERVISOR NAME HERE
 
-\item 
+\item
 Describe in this table the group that is delivering this project:
 
 \begin{center}
 \begin{tabular}{lll}
 Last and first name & Person code & Email address\\
 \hline
-  Titus Christopher Amadra & 11170417 & christopheramadra.titus@mail.polimi.it \\                     
+  YOUR LAST NAME, YOUR FIRST NAME & 0000000 & yourname@mail.polimi.it \\
 \end{tabular}
 \end{center}
 
 \item
-Describe here how development tasks have been subdivided among members
-of the group, e.g.:
+This project was developed individually. All design, implementation, testing,
+and documentation tasks were carried out by the sole author.
 
+\item Links to the project source code:
 \begin{itemize}
-\item Foo worked on the overall threading infrastructure
-\item Bar worked on lockfree access etc..
+  \item GitHub repository: \url{https://github.com/YOURUSERNAME/ths_hdc3022}
 \end{itemize}
-
-\item Links to the project source code; Put here, if available, links to public repos hosting your project 
 
 \end{itemize}
 
@@ -63,63 +53,206 @@ of the group, e.g.:
 \textbf{2 pages max please}
 
 \begin{itemize}
-\item What is your project about?
-\item Why it is important for the AOS course?
+\item
+\textbf{What is this project about?}
+
+This project consists of the design and implementation of a Linux kernel character
+device driver for the HDC3022 precision temperature and humidity sensor by Texas
+Instruments, mounted on the Adafruit HDC302x breakout board (product ADA5989).
+The sensor uses the TI HDC302x chip with typical 0.5\% RH accuracy (0.19\%
+long-term drift) and $\pm$0.1\,\textdegree{}C temperature accuracy. The HDC3022
+variant (available since September 2024) adds a PTFE filter cover over the sensor
+opening compared with the earlier HDC3021, but is otherwise electrically identical.
+
+The sensor communicates over I2C using only two wires (SDA and SCL) plus power
+and ground, supports 1.8\,V--5\,V logic levels with no level shifters required, and
+offers four selectable I2C addresses (0x44--0x47) via solder jumpers A0/A1 on the
+back of the breakout. Because a standard desktop Linux machine lacks native I2C
+GPIO pins, the physical I2C bus is provided by an \textbf{Adafruit MCP2221A
+USB-to-I2C/GPIO bridge} (ADA4471), connected to the sensor via a \textbf{STEMMA QT
+4-pin JST SH cable} (ADA4210). Starting with Linux Kernel 5.7, the kernel includes
+a native \texttt{hid\_mcp2221} driver that exposes the MCP2221A as a standard
+\texttt{/dev/i2c-X} adapter, making it directly usable by any I2C kernel driver.
+
+The driver exposes sensor readings through a character device node
+(\texttt{/dev/hdc3022\_0}), implements trigger-on-demand measurement, CRC-8
+validation of received data, and a soft reset at probe time.
+
+\item
+\textbf{Why is it important for the AOS course?}
+
+This project connects directly to the core topics covered in the AOS lectures and
+lab sessions. First, it requires mastery of the Linux device driver model:
+\texttt{i2c\_driver} registration, the \texttt{probe}/\texttt{remove} lifecycle,
+and the \texttt{file\_operations} interface. Second, as demonstrated in
+\texttt{lab-3-th-atomics}, unsynchronised access to shared kernel data produces
+race conditions and corruption. The driver addresses this with a \texttt{struct mutex}
+protecting every I2C transaction and an \texttt{atomic\_t} tracking open file
+descriptors, illustrating the correct choice of synchronisation primitive for
+sleepable kernel paths. Third, the project requires navigating the kernel's I2C
+core subsystem, understanding the layered architecture from USB HID (MCP2221A) to
+the sensor driver, and exercising kernel debugging skills (dmesg, i2c-tools,
+checkpatch.pl).
 \end{itemize}
 
-For those who choose to work on an open source project, please put here any
-reference/copy of messages exchanged with project maintainers to \textbf{identify the subject
-of the pull request}.
-
 \subsection{Design and implementation}
-Describe here the structure of the solution you devised. Note, don't put major
-parts of the source code here; if you can, put hyperlinks to existing repos.
 
-For those who choose to work on an open source project, please put here an
-history (mail messages/github issues etc..) of the interaction with the
-development team that helped you identify such design and the code reviews that
-helped you improve it.
+The driver is a standard Linux I2C kernel module (\texttt{hdc3022.c}).
+Source at \url{https://github.com/YOURUSERNAME/ths_hdc3022}.
 
-Those that have chosen to present a paper can exclude this section. 
+\textbf{Module initialisation.}
+\texttt{hdc3022\_init()} calls \texttt{alloc\_chrdev\_region()} to reserve up to
+four minor numbers (one per sensor), creates a sysfs class so that udev
+automatically creates \texttt{/dev} nodes, and registers the \texttt{i2c\_driver}
+via \texttt{i2c\_add\_driver()}. The driver's \texttt{id\_table} covers all
+HDC302x variants (\texttt{hdc3020}, \texttt{hdc3021}, \texttt{hdc3022}).
+
+\textbf{Per-device structure.}
+\texttt{struct hdc3022\_dev} holds a pointer to the \texttt{i2c\_client}, the
+\texttt{cdev} and \texttt{device} objects, a \texttt{struct mutex lock}, an
+\texttt{atomic\_t open\_count}, and the cached temperature (millidegrees Celsius)
+and humidity (milli-percent) from the last measurement.
+
+\textbf{Probe and resource management.}
+\texttt{hdc3022\_probe()} follows the kernel's \textit{goto-unwind} idiom: each
+successful allocation is paired with a cleanup label so any failure releases
+resources in reverse order. Memory is allocated with \texttt{devm\_kzalloc()},
+the sensor is soft-reset, and \texttt{device\_create()} publishes the
+\texttt{/dev/hdc3022\_0} node.
+
+\textbf{I2C measurement flow.}
+A measurement is triggered by writing the two-byte command \texttt{0x24 0xFF}
+(normal-power mode). After a 20\,ms delay the driver reads 6 bytes:
+two bytes raw temperature, one CRC-8 byte, two bytes raw humidity, one CRC-8 byte.
+Conversion follows the HDC302x datasheet formulas:
+\begin{align*}
+T\,[\text{\textdegree{}C}] &= -45 + 175 \cdot \frac{\mathrm{raw}_T}{65535} \\
+\mathrm{RH}\,[\%]           &= 100 \cdot \frac{\mathrm{raw}_{RH}}{65535}
+\end{align*}
+Results are stored as milli-units using 64-bit integer arithmetic to avoid
+floating-point in the kernel.
+
+\textbf{CRC-8 validation.}
+Each data pair is validated against its CRC-8 checksum (polynomial 0x31, init
+0xFF, no reflection). The CRC is computed over the two bytes in wire order (MSB
+first). A mismatch returns \texttt{-EIO}. A subtle byte-ordering bug caused all
+checks to fail in early testing until the buffer ordering was corrected.
+
+\textbf{Concurrency and synchronisation.}
+This is the most directly AOS-relevant aspect of the driver, motivated by the
+race conditions demonstrated in \texttt{lab-3-th-atomics}.
+
+A \texttt{struct mutex} (\texttt{dev->lock}) is acquired at the start of every
+\texttt{read()} call and released before returning, ensuring that only one I2C
+transaction is active at a time and that interleaved trigger/read sequences from
+different processes cannot corrupt the sensor's state machine. A mutex is required
+here -- and not a spinlock -- because \texttt{i2c\_master\_send()} and
+\texttt{i2c\_master\_recv()} may sleep while waiting for the bus controller.
+Using a spinlock caused a \texttt{BUG: sleeping function called from invalid
+context} warning in an early version. The \texttt{read()} path uses
+\texttt{mutex\_lock\_interruptible()} so that a blocked process can be woken
+by a Unix signal and returns \texttt{-ERESTARTSYS}.
+
+An \texttt{atomic\_t open\_count} is incremented in \texttt{.open()} and
+decremented in \texttt{.release()} without holding any lock. It is inspected in
+\texttt{hdc3022\_remove()} to detect and warn about open-file-descriptor races
+during module unload, preventing use-after-free.
 
 \section{Project outcomes}
 
 \subsection{Concrete outcomes}
-Describe the artifacts you've produced, if possible by linking to repo commits.
-For those who choose to work on an open source project, please put here the 
-\textbf{URL to your final pull request}.
 
-Those that have chosen to present a paper can include a link to the slides.
+\begin{itemize}
+  \item Fully functional \texttt{hdc3022.ko} kernel module probing the HDC3022
+  over the MCP2221A I2C adapter and exposing measurements via
+  \texttt{/dev/hdc3022\_0}.\\
+  Commit: \url{https://github.com/YOURUSERNAME/ths_hdc3022/commit/COMMIT_HASH}
+
+  \item \texttt{Makefile} for out-of-tree build against the running kernel tree,
+  supporting \texttt{make}, \texttt{make clean}, and \texttt{make install}.
+
+  \item Userspace test program (\texttt{test\_read.c}) reading the device in a
+  loop and a concurrent-access test using \texttt{fork()} to validate locking.
+
+  \item \texttt{README.md} covering: blacklisting \texttt{hid\_mcp2221} (required
+  on kernels $\geq$ 5.7), the udev rule for the MCP2221A, instantiating the device
+  via \texttt{echo hdc3022 0x44 > /sys/bus/i2c/devices/i2c-X/new\_device}, and
+  module load/unload.
+\end{itemize}
 
 \subsection{Learning outcomes}
 
-What was the most important thing all the members have learned while
-developing this part of the project, what questions remained unanswered,
-how you will use what you've learned in your everyday life?
-Please also indicate which tools you learned to use.
-
-Examples:
-
 \begin{itemize}
-\item Foo learned to write multithreaded applications, he's probably going to
-  create his own startup with what she has learned. She also learned how to
-  debug with gdb.
-\item Bar learned how to interact with the open source community, politely
-  answering to code reviews and issuing pull requests through Git.
+  \item \textbf{Linux kernel driver model:} I learned how the I2C subsystem works
+  end-to-end, from device enumeration and \texttt{probe()} callbacks to
+  \texttt{i2c\_master\_send()}/\texttt{recv()} calls. The layered architecture
+  (USB HID $\to$ MCP2221A $\to$ I2C core $\to$ sensor driver) clarified how the
+  kernel abstracts hardware bus-agnostically.
+
+  \item \textbf{Concurrency in the kernel:} Directly connected to
+  \texttt{lab-3-th-atomics}, the most challenging task was choosing the correct
+  primitive. I learned why mutexes are mandatory in sleepable I2C paths, why
+  \texttt{mutex\_lock\_interruptible()} improves signal responsiveness, and how
+  \texttt{atomic\_t} safely tracks reference counts without any lock.
+
+  \item \textbf{Debugging tools:} I learned to use \texttt{i2cdetect},
+  \texttt{i2cdump}, and \texttt{i2cget} from \texttt{i2c-tools} to trace I2C
+  transactions at the bus level, as well as \texttt{dmesg},
+  \texttt{dynamic\_debug}, \texttt{ftrace}, and \texttt{checkpatch.pl}.
+
+  \item \textbf{Unanswered question:} How to integrate the driver into the
+  kernel's Industrial I/O (IIO) subsystem for a standardised upstream-ready ABI.
+
+  \item \textbf{Tools learned:} \texttt{i2c-tools}, \texttt{insmod}/\texttt{rmmod}/
+  \texttt{modinfo}, kernel \texttt{dynamic\_debug}, \texttt{ftrace},
+  \texttt{checkpatch.pl}, and the sysfs \texttt{new\_device} interface.
 \end{itemize}
 
 \subsection{Existing knowledge}
-What courses you have followed (not only AOS) did help you in doing this project
-and why? Do you have any suggestions on improving the AOS course with topics
-that would have made it easier for you?
+
+The AOS course provided the most relevant background, especially lectures on device
+drivers and synchronisation and labs \texttt{lab-3-th-atomics} and
+\texttt{lab-3-th-rcu}. The Systems Programming course gave a C and POSIX foundation
+that made kernel source readable. Computer Architecture clarified I2C electrical
+signalling and timing constraints from the datasheet.
+
+A course improvement suggestion: a lab session building a minimal character device
+driver from scratch would lower the barrier significantly, as the out-of-tree build
+environment, module lifecycle, and sysfs device instantiation are non-obvious to
+first-time kernel developers.
 
 \subsection{Problems encountered}
-What were the most important problems and issues you encountered? Did you ever
-encountered them before? 
 
 \begin{itemize}
-\item Foo encountered a problem with some critical sections. He ended up
-  rewriting existing lock implementation.
+  \item \textbf{Native \texttt{hid\_mcp2221} driver conflict.}
+  Linux 5.7+ includes a native MCP2221 driver that claims the device and hides the
+  I2C adapter. Required \texttt{sudo rmmod hid\_mcp2221}, adding \texttt{blacklist
+  hid\_mcp2221} to \texttt{/etc/modprobe.d/blacklist.conf}, running
+  \texttt{sudo update-initramfs -u}, and rebooting. This step is documented in the
+  Adafruit MCP2221 guide and was the first major obstacle.
+
+  \item \textbf{Manual I2C device instantiation.}
+  A desktop system has no device tree. The HDC3022 must be instantiated via the
+  sysfs \texttt{new\_device} interface:
+  \texttt{echo hdc3022 0x44 > /sys/bus/i2c/devices/i2c-X/new\_device}.
+  Discovering this mechanism required careful reading of kernel documentation.
+
+  \item \textbf{CRC validation failures.}
+  All CRC checks failed in early testing due to computing the checksum over the
+  bytes in the wrong order. The CRC must be computed MSB-first, matching wire
+  order. Adding debug prints for both the received and computed CRC values
+  identified the bug.
+
+  \item \textbf{Sleeping inside spinlock context.}
+  An early version used a \texttt{spinlock\_t} around the I2C transfer, producing
+  \texttt{BUG: sleeping function called from invalid context}. This is the exact
+  class of concurrency mistake illustrated in \texttt{lab-3-th-atomics}. Replacing
+  the spinlock with a mutex resolved the issue.
+
+  \item \textbf{Module unload race condition.}
+  Running \texttt{rmmod} while a process held the device open caused a kernel oops.
+  The \texttt{atomic\_t open\_count} check in \texttt{hdc3022\_remove()} addresses
+  this; a production fix would use \texttt{try\_module\_get()}/\texttt{module\_put()}.
 \end{itemize}
 
 \section{Honor Pledge}
@@ -131,7 +264,7 @@ Conduct) and represents my/our original production, unless otherwise cited.
 
 I/We also understand that this project, if successfully graded,  will fulfill part B requirement of the
 Advanced Operating System course and that it will be considered valid up until
-the AOS exam of Sept. 2026. 
+the AOS exam of Sept. 2022. 
 
 \begin{flushright}
 Group Students' signatures
