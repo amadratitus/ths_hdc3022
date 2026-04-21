@@ -4,9 +4,9 @@ This project implements a Linux kernel module for interfacing with the HDC3022
 temperature and humidity sensor over I2C.
 
 ## Hardware
-- Adafruit HDC3022 T & RH QT (P5989) - [http://adfru.it/5989]
-- Adafruit MCP2221A USB-to-GPIO ADC I2C (P4471) - [http://adfru.it/4471]
-- STEMMA QT 200mm JST SH 4-Pin Cable (P4401B) - [http://adfru.it/4401]
+- Adafruit HDC3022 T & RH QT (P5989) - [http://adafru.it/5989]
+- Adafruit MCP2221A USB-to-GPIO ADC I2C (P4471) - [http://adafru.it/4471]
+- STEMMA QT 200mm JST SH 4-Pin Cable (P4401B) - [http://adafru.it/4401]
 
 ## Features
 - I2C communication via MCP2221A (`/dev/i2c-X`)
