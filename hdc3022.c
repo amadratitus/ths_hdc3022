@@ -32,6 +32,7 @@
 #include <linux/cdev.h>
 #include <linux/device.h>
 #include <linux/mutex.h>
+#include <linux/kref.h>
 #include <linux/atomic.h>
 #include <linux/delay.h>
 #include <linux/slab.h>
@@ -79,13 +80,15 @@ struct hdc3022_dev {
 
 	/*
 	 * Concurrency:
-	 * - lock protects I2C transactions and cached measurement values
-	 * - open_count tracks open file descriptors
+	 * - lock protects I2C transactions, cached measurements, and removed flag
+	 * - ref keeps the struct alive while file descriptors are open; the probe
+	 *   path holds one reference, each open() acquires one more
 	 *
 	 * mutex is correct here because i2c_master_send()/recv() may sleep.
 	 */
 	struct mutex lock;
-	atomic_t open_count;
+	struct kref ref;
+	bool removed;
 
 	/* Cached last measurement, protected by lock */
 	s32 temperature_mdeg; /* millidegrees Celsius */
@@ -117,6 +120,14 @@ static void hdc3022_free_minor(int minor)
 	mutex_lock(&minor_lock);
 	minor_in_use[minor] = false;
 	mutex_unlock(&minor_lock);
+}
+
+static void hdc3022_dev_release(struct kref *ref)
+{
+	struct hdc3022_dev *dev = container_of(ref, struct hdc3022_dev, ref);
+
+	mutex_destroy(&dev->lock);
+	kfree(dev);
 }
 
 static u8 hdc3022_crc8(const u8 *buf, size_t len)
@@ -231,12 +242,10 @@ static int hdc3022_fop_open(struct inode *inode, struct file *filp)
 	struct hdc3022_dev *dev;
 
 	dev = container_of(inode->i_cdev, struct hdc3022_dev, cdev);
+	kref_get(&dev->ref);
 	filp->private_data = dev;
 
-	atomic_inc(&dev->open_count);
-	dev_dbg(&dev->client->dev, "open_count=%d\n",
-		atomic_read(&dev->open_count));
-
+	dev_dbg(&dev->client->dev, "opened\n");
 	return 0;
 }
 
@@ -244,10 +253,7 @@ static int hdc3022_fop_release(struct inode *inode, struct file *filp)
 {
 	struct hdc3022_dev *dev = filp->private_data;
 
-	atomic_dec(&dev->open_count);
-	dev_dbg(&dev->client->dev, "open_count=%d\n",
-		atomic_read(&dev->open_count));
-
+	kref_put(&dev->ref, hdc3022_dev_release);
 	return 0;
 }
 
@@ -267,6 +273,11 @@ static ssize_t hdc3022_fop_read(struct file *filp, char __user *ubuf,
 	if (mutex_lock_interruptible(&dev->lock))
 		return -ERESTARTSYS;
 
+	if (dev->removed) {
+		mutex_unlock(&dev->lock);
+		return -ENODEV;
+	}
+
 	ret = hdc3022_update_measurement(dev);
 	if (ret) {
 		mutex_unlock(&dev->lock);
@@ -277,11 +288,12 @@ static ssize_t hdc3022_fop_read(struct file *filp, char __user *ubuf,
 	hum_mpct = dev->humidity_mpct;
 
 	len = scnprintf(kbuf, sizeof(kbuf),
-			"T=%d.%03dC RH=%u.%03u%%\n",
-			temp_mdeg / 1000,
-			abs(temp_mdeg % 1000),
-			hum_mpct / 1000,
-			hum_mpct % 1000);
+		"T=%s%d.%03dC RH=%u.%03u%%\n",
+		(temp_mdeg < 0) ? "-" : "",
+		abs(temp_mdeg / 1000),
+		abs(temp_mdeg % 1000),
+		hum_mpct / 1000,
+		hum_mpct % 1000);
 
 	mutex_unlock(&dev->lock);
 
@@ -310,25 +322,25 @@ static int hdc3022_probe(struct i2c_client *client)
 
 	dev_info(&client->dev, "probing HDC3022 at address 0x%02X\n", client->addr);
 
-	dev = devm_kzalloc(&client->dev, sizeof(*dev), GFP_KERNEL);
+	dev = kzalloc(sizeof(*dev), GFP_KERNEL);
 	if (!dev)
 		return -ENOMEM;
 
 	dev->client = client;
 	dev->minor = -1;
 	mutex_init(&dev->lock);
-	atomic_set(&dev->open_count, 0);
+	kref_init(&dev->ref);
 	i2c_set_clientdata(client, dev);
 
 	ret = hdc3022_soft_reset(dev);
 	if (ret)
-		goto err_mutex_destroy;
+		goto err_free;
 
 	minor = hdc3022_alloc_minor();
 	if (minor < 0) {
 		dev_err(&client->dev, "no free minor numbers\n");
 		ret = minor;
-		goto err_mutex_destroy;
+		goto err_free;
 	}
 	dev->minor = minor;
 
@@ -358,8 +370,8 @@ err_cdev_del:
 err_free_minor:
 	hdc3022_free_minor(dev->minor);
 	dev->minor = -1;
-err_mutex_destroy:
-	mutex_destroy(&dev->lock);
+err_free:
+	kref_put(&dev->ref, hdc3022_dev_release);
 	return ret;
 }
 
@@ -370,10 +382,9 @@ static void hdc3022_remove(struct i2c_client *client)
 	if (!dev)
 		return;
 
-	if (atomic_read(&dev->open_count) > 0)
-		dev_warn(&client->dev,
-			 "device removed while still open (open_count=%d)\n",
-			 atomic_read(&dev->open_count));
+	mutex_lock(&dev->lock);
+	dev->removed = true;
+	mutex_unlock(&dev->lock);
 
 	if (dev->device)
 		device_destroy(hdc3022_class,
@@ -384,9 +395,11 @@ static void hdc3022_remove(struct i2c_client *client)
 	if (dev->minor >= 0)
 		hdc3022_free_minor(dev->minor);
 
-	mutex_destroy(&dev->lock);
-
 	dev_info(&client->dev, "HDC3022 removed\n");
+
+	/* Drop the probe reference. If no fds are open this frees dev;
+	 * otherwise the last fop_release will free it. */
+	kref_put(&dev->ref, hdc3022_dev_release);
 }
 
 static const struct i2c_device_id hdc3022_id[] = {
