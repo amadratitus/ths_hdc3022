@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-License-Identifier: MIT License
 /*
  * hdc3022.c - Linux I2C kernel driver for the TI HDC3022
  *             Precision Temperature & Humidity Sensor
