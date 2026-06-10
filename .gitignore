@@ -1,6 +1,4 @@
-# =========================
 # Kernel module build files
-# =========================
 *.o
 *.ko
 *.mod
@@ -10,16 +8,17 @@
 *.symvers
 *.cmd
 *.d
-
 Module.symvers
+.Module.symvers.cmd
 modules.order
-
-# Kernel build directories
+.modules.order.cmd
+.vscode/
+# Kernel build directories, when previous when linux kernal source was cloned from github repo
 .tmp_versions/
-
-# =========================
-# General compiled objects
-# =========================
+hdc3022.ko
+linux/
+build/
+logs/
 *.slo
 *.lo
 *.obj
@@ -31,65 +30,9 @@ modules.order
 *.exe
 *.out
 *.app
-
-# Debug / symbols
 *.pdb
 *.dwo
-
-# =========================
-# Latex auxiliary files
-# =========================
-*.aux
-*.log
-*.bbl
-*.blg
-*.toc
-*.lof
-*.lot
-*.fls
-*.fdb_latexmk
-*.synctex.gz
-*.nav
-*.snm
-*.vrb
-*.bcf
-*.run.xml
-*.xml
-
-# Optional: ignore compiled PDF (remove if you want to track report.pdf)
-*.pdf
-*.dvi
-*.ps
-
-# =========================
-# Editor / OS files
-# =========================
 *.swp
 *.swo
 *.bak
 *~
-
-.vscode/
-.idea/
-
-# =========================
-# Project-specific ignores
-# =========================
-
-# Built module (explicit)
-hdc3022.ko
-
-# Linux kernel source clone (VERY IMPORTANT)
-linux/
-
-# Build artifacts folder
-build/
-logs/
-
-# =========================
-# Keep important files
-# =========================
-!README.md
-!Makefile
-!hdc3022.c
-!docs/
