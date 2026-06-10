@@ -9,7 +9,7 @@
  *   - STEMMA QT / Qwiic cable
  *
  * Repository:
- *   https://github.com/YOURUSERNAME/ths_hdc3022
+ *   https://github.com/amadratitus/ths_hdc3022
  *
  * Notes:
  *   - Default HDC302x I2C address is typically 0x44
@@ -17,11 +17,11 @@
  *   - This project exposes a simple character device:
  *       /dev/hdc3022_<minor>
  *
- * Read format:
+ * Reading format:
  *   T=23.456C RH=55.123%
  *
  * Author:
- *   YOUR NAME HERE <yourname@mail.polimi.it>
+ *   Christopher Amadra Titus - christopheramadra.titus@mail.polimi.it
  */
 
 #include <linux/module.h>
@@ -59,7 +59,7 @@
 
 #define HDC3022_MAX_DEVS         4
 
-MODULE_AUTHOR("YOUR NAME HERE <yourname@mail.polimi.it>");
+MODULE_AUTHOR("CHRISTOPHER AMADRA TITUS christopheramadra.titus@mail.polimi.it");
 MODULE_DESCRIPTION("Linux I2C driver for the TI HDC3022 temperature/humidity sensor");
 MODULE_VERSION(DRIVER_VERSION);
 MODULE_LICENSE("GPL");
@@ -67,7 +67,7 @@ MODULE_LICENSE("GPL");
 static dev_t hdc3022_devno;
 static struct class *hdc3022_class;
 
-/* Simple minor allocator for the project */
+/* A minor allocator*/
 static DEFINE_MUTEX(minor_lock);
 static bool minor_in_use[HDC3022_MAX_DEVS];
 

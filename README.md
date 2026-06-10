@@ -54,7 +54,7 @@ sudo rmmod hdc3022
 
 2. Adafruit Industries, *Adafruit HDC302x Breakout Board* (ADA5989) — product guide and wiring instructions. https://learn.adafruit.com/adafruit-hdc302x-breakout
 
-3. Adafruit Industries, *MCP2221A USB-to-GPIO ADC I2C* (P4471) — setup guide, including the `hid_mcp2221` blacklist procedure. https://learn.adafruit.com/circuitpython-libraries-on-any-computer-with-mcp2221
+3. Adafruit Industries, *MCP2221A USB-to-GPIO ADC I2C* (P4471) — setup guide, including the `hid_mcp2221` blacklist procedure. https://learn.adafruit.com/circuitpython-libraries-on-any-computer-with-mcp2221 and https://askubuntu.com/questions/110341/how-to-blacklist-kernel-modules
 
 4. The Linux Kernel documentation, *I2C/SMBus Subsystem* — `i2c_driver`, `i2c_client`, `i2c_master_send()`/`recv()`, and the `new_device` sysfs interface. https://www.kernel.org/doc/html/latest/i2c/index.html
 
