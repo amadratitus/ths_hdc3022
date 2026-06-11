@@ -1,8 +1,5 @@
 // SPDX-License-Identifier: MIT License
 /*
- * hdc3022.c - Linux I2C kernel driver for the TI HDC3022
- *             Precision Temperature & Humidity Sensor
- *
  * Hardware:
  *   - Adafruit HDC3022 breakout
  *   - Adafruit MCP2221A USB-to-I2C bridge
@@ -160,7 +157,7 @@ static int hdc3022_soft_reset(struct hdc3022_dev *dev)
 		return ret < 0 ? ret : -EIO;
 	}
 
-	msleep(2);
+	fsleep(2000);
 	return 0;
 }
 
@@ -322,7 +319,7 @@ static int hdc3022_probe(struct i2c_client *client)
 
 	dev_info(&client->dev, "probing HDC3022 at address 0x%02X\n", client->addr);
 
-	dev = kzalloc(sizeof(*dev), GFP_KERNEL);
+	dev = kzalloc_obj(dev, GFP_KERNEL);
 	if (!dev)
 		return -ENOMEM;
 
@@ -398,7 +395,8 @@ static void hdc3022_remove(struct i2c_client *client)
 	dev_info(&client->dev, "HDC3022 removed\n");
 
 	/* Drop the probe reference. If no fds are open this frees dev;
-	 * otherwise the last fop_release will free it. */
+	 * otherwise the last fop_release will free it.
+	 */
 	kref_put(&dev->ref, hdc3022_dev_release);
 }
 
