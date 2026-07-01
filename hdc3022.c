@@ -80,8 +80,6 @@ struct hdc3022_dev {
 	 * - lock protects I2C transactions, cached measurements, and removed flag
 	 * - ref keeps the struct alive while file descriptors are open; the probe
 	 *   path holds one reference, each open() acquires one more
-	 *
-	 * mutex is correct here because i2c_master_send()/recv() may sleep.
 	 */
 	struct mutex lock;
 	struct kref ref;
