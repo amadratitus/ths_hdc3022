@@ -4,6 +4,7 @@ set -e
 
 # --- Configuration ---
 MODULE_NAME="hdc3022"
+DEVICE_NAME="hdc3022"
 DEVICE_ADDR=0x44 # Default HDC3022 address
 DEV_NODE="/dev/hdc3022_0"
 I2C_BUS=""
@@ -57,13 +58,14 @@ echo "[+] Loading I2C device interface..."
 sudo modprobe i2c-dev || true
 
 echo "[+] Loading ${MODULE_NAME} module..."
+sudo rmmod ${MODULE_NAME} 2>/dev/null || true
 sudo insmod ./${MODULE_NAME}.ko
 sleep 1
 
 # --- Step 5: Instantiate Device ---
 echo "[+] Instantiating HDC3022 on I2C bus ${I2C_BUS}..."
 if [ ! -e ${DEV_NODE} ]; then
-    echo "${DEVICE_ADDR}" | sudo tee /sys/bus/i2c/devices/i2c-${I2C_BUS}/new_device > /dev/null
+    echo "${DEVICE_NAME} ${DEVICE_ADDR}" | sudo tee /sys/bus/i2c/devices/i2c-${I2C_BUS}/new_device > /dev/null
     sleep 1
 fi
 
@@ -81,10 +83,10 @@ tput civis # Hide cursor
 stty -echo # Disable echo
 
 while true; do
-    if [ -f ${DEV_NODE} ]; then
+    if [ -e ${DEV_NODE} ]; then
         # Read the output: "T=23.456C RH=55.123%"
-        output=$(cat ${DEV_NODE} 2>/dev/null)
-        
+        output=$(sudo cat ${DEV_NODE} 2>/dev/null || true)
+
         if [[ -n "$output" ]]; then
             # Display on single line, overwriting previous
             echo -ne "\r\033[K ${output} "
@@ -94,12 +96,11 @@ while true; do
     else
         echo -ne "\r\033[K Device node missing... "
     fi
-    
+
     # Wait 2 seconds for key press
-    read -t 2 -n 1 -s key
-    if [ $? -eq 0 ]; then
+    if read -t 2 -n 1 -s key; then
         break
     fi
 done
 
-# Loop exits, trap runs cleanup   
+# Loop exits, trap runs cleanup
