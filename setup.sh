@@ -85,7 +85,7 @@ stty -echo # Disable echo
 while true; do
     if [ -e ${DEV_NODE} ]; then
         # Read the output: "T=23.456C RH=55.123%"
-        output=$(cat ${DEV_NODE} 2>/dev/null || true)
+        output=$(sudo cat ${DEV_NODE} 2>/dev/null || true)
 
         if [[ -n "$output" ]]; then
             # Display on single line, overwriting previous
