@@ -64,6 +64,14 @@ MODULE_LICENSE("GPL");
 static dev_t hdc3022_devno;
 static struct class *hdc3022_class;
 
+// Callback function to set appropriate permission
+static char *hdc3022_devnode(const struct device *dev, umode_t *mode)
+{
+	if (mode)
+		*mode = 0444;
+
+	return NULL;
+}
 /* A minor allocator*/
 static DEFINE_MUTEX(minor_lock);
 static bool minor_in_use[HDC3022_MAX_DEVS];
@@ -445,6 +453,8 @@ static int __init hdc3022_init(void)
 		goto err_unregister_chrdev;
 	}
 
+	hdc3022_class->devnode = hdc3022_devnode;
+	
 	ret = i2c_add_driver(&hdc3022_driver);
 	if (ret) {
 		pr_err("%s: i2c_add_driver failed: %d\n", DRIVER_NAME, ret);
