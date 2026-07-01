@@ -317,7 +317,7 @@ static int hdc3022_probe(struct i2c_client *client)
 
 	dev_info(&client->dev, "probing HDC3022 at address 0x%02X\n", client->addr);
 
-	dev = kzalloc_obj(dev, GFP_KERNEL);
+	dev = kzalloc(sizeof(*dev), GFP_KERNEL);
 	if (!dev)
 		return -ENOMEM;
 
