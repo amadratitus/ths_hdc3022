@@ -1,5 +1,6 @@
-// SPDX-License-Identifier: MIT License
+// SPDX-License-Identifier: GPL-2.0-only
 /*
+ * HDC3022 temperature and humidity sensor driver (character device) 
  * Hardware:
  *   - Adafruit HDC3022 breakout
  *   - Adafruit MCP2221A USB-to-I2C bridge
