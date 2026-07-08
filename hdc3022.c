@@ -5,19 +5,15 @@
  *   - Adafruit HDC3022 breakout
  *   - Adafruit MCP2221A USB-to-I2C bridge
  *   - STEMMA QT / Qwiic cable
- *
  * Repository:
  *   https://github.com/amadratitus/ths_hdc3022
- *
  * Notes:
  *   - Default HDC302x I2C address is typically 0x44
  *   - A single mutex protects every I2C transaction and cached measurement
  *   - This project exposes a simple character device:
  *       /dev/hdc3022_<minor>
- *
  * Reading format:
  *   T=23.456C RH=55.123%
- *
  * Author:
  *   Christopher Amadra Titus - christopheramadra.titus@mail.polimi.it
  */
