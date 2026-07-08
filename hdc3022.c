@@ -451,7 +451,6 @@ static int __init hdc3022_init(void)
 	}
 
 	hdc3022_class->devnode = hdc3022_devnode;
-	
 	ret = i2c_add_driver(&hdc3022_driver);
 	if (ret) {
 		pr_err("%s: i2c_add_driver failed: %d\n", DRIVER_NAME, ret);
